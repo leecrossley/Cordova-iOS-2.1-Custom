@@ -197,6 +197,12 @@
     if (backupWebStorage) {
         [CDVLocalStorage __verifyAndFixDatabaseLocations];
     }
+
+	// HACK for iOS6(+?) local storage backup
+	if (IsAtLeastiOSVersion(@"6.0")) {
+		[CDVLocalStorage __restoreThenRemoveBackupLocations];
+		[[NSUserDefaults standardUserDefaults] setBool:backupWebStorage forKey:@"WebKitStoreWebDataForBackup"];
+	}
     
     //// Instantiate the WebView ///////////////
 
@@ -221,11 +227,20 @@
     if ([enableLocation boolValue]) {
         [[self.commandDelegate getCommandInstance:@"Geolocation"] getLocation:nil];
     }
+
+	// HACK for iOS6(+?) local storage backup
+	if (!IsAtLeastiOSVersion(@"6.0")) {
+		if (backupWebStorage) {
+			[self.commandDelegate registerPlugin:[[CDVLocalStorage alloc] initWithWebView:self.webView] withClassName:NSStringFromClass([CDVLocalStorage class])];
+		} else {
+			[CDVLocalStorage __restoreThenRemoveBackupLocations];
+		}
+	}
     
     /*
      * Fire up CDVLocalStorage on iOS 5.1 to work-around WebKit storage limitations, or adjust set user defaults on iOS 6.0+
      */
-    if (IsAtLeastiOSVersion(@"6.0")) {
+    /*if (IsAtLeastiOSVersion(@"6.0")) {
         // We don't manually back anything up in 6.0 and so we should remove any old backups.
         [CDVLocalStorage __restoreThenRemoveBackupLocations];
         [[NSUserDefaults standardUserDefaults] setBool:backupWebStorage forKey:@"WebKitStoreWebDataForBackup"];
@@ -235,7 +250,7 @@
         } else {
             [CDVLocalStorage __restoreThenRemoveBackupLocations];
         }
-    }
+    }*/
     
     /*
      * This is for iOS 4.x, where you can allow inline <video> and <audio>, and also autoplay them
